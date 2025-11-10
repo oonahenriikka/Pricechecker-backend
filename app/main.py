@@ -1,18 +1,19 @@
-# app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import Base, engine, get_db, SessionLocal
 
 from app.models.store import Store
-from app.models import user
+from app.models import user, price
 from app.schemas.store import StoreCreate, StoreResponse
 from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.price import PriceCreate, PriceResponse
 from app.crud.store import create_store
 from app.crud.user import create_user, get_user_by_email, approve_user
+from app.crud.price import create_price, get_prices
 from app.auth import (
     create_access_token, authenticate_user, get_current_admin_user,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    get_current_active_user, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
 Base.metadata.create_all(bind=engine)
@@ -79,3 +80,24 @@ def approve_user_endpoint(user_id: int, admin=Depends(get_current_admin_user), d
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": f"User {user.email} approved"}
+
+# PRICE ENDPOINTS
+@app.post("/prices/", response_model=PriceResponse)
+def add_price(
+    price_in: PriceCreate,
+    current_user: user.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.is_approved:
+        raise HTTPException(status_code=403, detail="Only approved store users can add prices")
+    return create_price(
+        db=db,
+        product_name=price_in.product_name,
+        price=price_in.price,
+        store_id=price_in.store_id,
+        user_id=current_user.id
+    )
+
+@app.get("/prices/", response_model=list[PriceResponse])
+def list_prices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return get_prices(db, skip, limit)
