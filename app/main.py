@@ -1,8 +1,9 @@
+# app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from app.database import Base, engine, get_db, SessionLocal
 
-from app.database import Base, engine, get_db
 from app.models.store import Store
 from app.models import user
 from app.schemas.store import StoreCreate, StoreResponse
@@ -22,16 +23,19 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Auto-create first admin
 @app.on_event("startup")
-def create_first_admin(db: Session = Depends(get_db)):
-    if not get_user_by_email(db, "admin@pricechecker.fi"):
-        create_user(
-            db=db,
-            email="admin@pricechecker.fi",
-            password="admin123",
-            is_admin=True
-        )
+def create_first_admin():
+    db: Session = SessionLocal()
+    try:
+        if not get_user_by_email(db, "admin@pricechecker.fi"):
+            create_user(
+                db=db,
+                email="admin@pricechecker.fi",
+                password="admin123",
+                is_admin=True
+            )
+    finally:
+        db.close()
 
 @app.get("/")
 def root():
