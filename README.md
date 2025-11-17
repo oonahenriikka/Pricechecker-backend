@@ -7,7 +7,6 @@ How to run the project:
 2. Create and activate virtual environment
    python -m venv venv
    venv\Scripts\activate          # Windows
-   # or: source venv/bin/activate  # Mac/Linux
 
 3. Install dependencies
    pip install fastapi uvicorn sqlalchemy pydantic pytest httpx "passlib[argon2]" "python-jose[cryptography]" python-multipart argon2-cffi
