@@ -145,3 +145,9 @@ def add_prices_batch(price_data: PriceBatch, db: Session = Depends(get_db), curr
     if not current_user.is_approved:
         raise HTTPException(status_code=403, detail="User not approved")
     return crud_price.create_prices_batch(db, price_data.prices, current_user)
+
+
+
+@app.get("/compare")
+def compare_prices(product_name: str, lat: float, lon: float, radius_km: float = 5.0, db: Session = Depends(get_db)):
+    return crud_price.compare_by_location(db, product_name, lat, lon, radius_km)

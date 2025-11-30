@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.price import Price
+from app.utils import distance_km
+
 
 def create_price(db: Session, product_name: str, price: float, store_id: int, user_id: int):
     db_price = Price(

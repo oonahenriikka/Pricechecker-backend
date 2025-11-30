@@ -12,3 +12,6 @@ class Store(Base):
 
 
     users = relationship("User", back_populates="store")
+
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
