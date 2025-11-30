@@ -17,4 +17,4 @@ How to run the project:
 5. Open browser → http://127.0.0.1:8000/docs
 
 6. (Optional) Run tests
-   pytest -q   
+   pytest -q

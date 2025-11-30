@@ -15,3 +15,10 @@ def create_price(db: Session, product_name: str, price: float, store_id: int, us
 
 def get_prices(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Price).offset(skip).limit(limit).all()
+
+
+def create_prices_batch(db, prices, user):
+    created = []
+    for p in prices:
+        created.append(create_price(db, p, user))
+    return created

@@ -16,3 +16,6 @@ class PriceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PriceBatch(BaseModel):
+    prices: list[PriceCreate]

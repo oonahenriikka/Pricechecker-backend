@@ -137,3 +137,11 @@ def add_price(
 @app.get("/prices/", response_model=List[PriceResponse])
 def list_prices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return get_prices(db, skip, limit)
+
+
+
+@app.post("/prices/batch")
+def add_prices_batch(price_data: PriceBatch, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if not current_user.is_approved:
+        raise HTTPException(status_code=403, detail="User not approved")
+    return crud_price.create_prices_batch(db, price_data.prices, current_user)
