@@ -5,21 +5,37 @@ from sqlalchemy import func
 from datetime import timedelta
 from typing import List
 
+# ── Security & Auth ─────────────────────────────────────
+from app.core.security import get_current_user
+from app.auth import (
+    create_access_token,
+    authenticate_user,
+    get_current_admin_user,
+    get_current_active_user,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
+
+# ── Database ────────────────────────────────────────────
 from app.database import Base, engine, get_db, SessionLocal
-from app.models.store import Store
-from app.models import user, price
+
+# ── Models ──────────────────────────────────────────────
+from app.models import user
+
+# ── Schemas ─────────────────────────────────────────────
 from app.schemas.store import StoreCreate, StoreResponse
 from app.schemas.user import UserCreate, UserResponse, Token, EmailStr
-from app.schemas.price import PriceCreate, PriceResponse
+from app.schemas.price import PriceCreate, PriceResponse, PriceBatch   # ← ADD THIS
+
+# ── CRUD ────────────────────────────────────────────────
 from app.crud.store import create_store
 from app.crud.user import create_user, get_user_by_email, approve_user
 from app.crud.price import create_price, get_prices
-from app.auth import (
-    create_access_token, authenticate_user, get_current_admin_user,
-    get_current_active_user, ACCESS_TOKEN_EXPIRE_MINUTES
-)
+import app.crud.price as crud_price   # ← ADD THIS (or from app.crud import price as crud_price)
+
+# ── Utils ───────────────────────────────────────────────
 from app.utils import get_password_hash
 
+# Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -64,6 +80,7 @@ def signup(
     store_name: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    from app.models.store import Store  # local import to avoid circular issues if any
 
     store = db.query(Store).filter(
         func.lower(Store.name) == func.lower(store_name.strip())
@@ -74,11 +91,9 @@ def signup(
             detail="Store not found. Please check the exact name (case-insensitive)."
         )
 
-
     if get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
-  
     hashed_password = get_password_hash(password)
     new_user = create_user(
         db=db,
@@ -139,15 +154,25 @@ def list_prices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return get_prices(db, skip, limit)
 
 
-
-@app.post("/prices/batch")
-def add_prices_batch(price_data: PriceBatch, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+# FIXED BATCH ENDPOINT
+@app.post("/prices/batch", response_model=List[PriceResponse])
+def add_prices_batch(
+    price_data: PriceBatch,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     if not current_user.is_approved:
         raise HTTPException(status_code=403, detail="User not approved")
     return crud_price.create_prices_batch(db, price_data.prices, current_user)
 
 
-
+# FIXED COMPARE ENDPOINT
 @app.get("/compare")
-def compare_prices(product_name: str, lat: float, lon: float, radius_km: float = 5.0, db: Session = Depends(get_db)):
+def compare_prices(
+    product_name: str,
+    lat: float,
+    lon: float,
+    radius_km: float = 5.0,
+    db: Session = Depends(get_db)
+):
     return crud_price.compare_by_location(db, product_name, lat, lon, radius_km)
