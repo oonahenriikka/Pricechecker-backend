@@ -2,14 +2,20 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
+class BarcodeInfo(BaseModel):
+    barcode_type: str | None = None
+    gtin: str | None = None
+
 class PriceComparisonItem(BaseModel):
     store_id: int
     store_name: str
     price: float
     distance_km: float
-    address: Optional[str] = None
+    address: str | None = None
     lat: float
     lon: float
+    barcode_type: str | None = None   
+    gtin: str | None = None           
 
 class PriceComparisonResponse(BaseModel):
     product_name: str
@@ -19,11 +25,14 @@ class PriceCreate(BaseModel):
     product_name: str
     price: float
     store_id: int
+    barcode: BarcodeInfo | None = None
 
 class PriceResponse(BaseModel):
     id: int
     product_name: str
     price: float
+    barcode_type: str | None = None
+    gtin: str | None = None
     store_id: int
     user_id: int
     created_at: datetime
@@ -35,6 +44,8 @@ class PriceBatchItem(BaseModel):
     product_name: str
     price: float
     store_id: int
+    barcode_type: str | None = None
+    gtin: str | None = None
 
 class PriceBatchResponse(BaseModel):
     success_count: int
