@@ -1,0 +1,5 @@
+GET /api/v1/compare
+?product_name=Maito
+&lat=60.1699
+&lon=24.9384
+&radius_km=10

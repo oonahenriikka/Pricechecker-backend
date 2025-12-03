@@ -1,15 +1,19 @@
-from pydantic import BaseModel, Field
+# app/schemas/store.py
+from pydantic import BaseModel
+from typing import Optional
 
-class StoreBase(BaseModel):
-    name: str = Field(..., example="K-Market Kamppi")
-    latitude: float = Field(..., example=60.1699)
-    longitude: float = Field(..., example=24.9332)
+class StoreCreate(BaseModel):
+    name: str
+    lat: float          
+    lon: float         
+    address: Optional[str] = None
 
-class StoreCreate(StoreBase):
-    pass
-
-class StoreResponse(StoreBase):
+class StoreResponse(BaseModel):
     id: int
+    name: str
+    lat: float
+    lon: float
+    address: Optional[str]
 
     class Config:
-        from_attributes = True  
+        from_attributes = True
