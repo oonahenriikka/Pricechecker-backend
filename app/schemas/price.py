@@ -30,3 +30,13 @@ class PriceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PriceBatchItem(BaseModel):
+    product_name: str
+    price: float
+    store_id: int
+
+class PriceBatchResponse(BaseModel):
+    success_count: int
+    failed_count: int
+    errors: list[str] = []
