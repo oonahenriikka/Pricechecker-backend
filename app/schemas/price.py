@@ -13,11 +13,13 @@ class PriceComparisonItem(BaseModel):
     final_price: float
     discount_info: Optional[str] = None
     distance_km: float
-    address: str | None = None
+    address: Optional[str] = None
     lat: float
     lon: float
-    barcode_type: str | None = None   
-    gtin: str | None = None           
+    barcode_type: Optional[str] = None   
+    gtin: Optional[str] = None           
+
+    price_label: str
 
 class PriceComparisonResponse(BaseModel):
     product_name: str

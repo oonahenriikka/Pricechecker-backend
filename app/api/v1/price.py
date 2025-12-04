@@ -1,3 +1,4 @@
+# app/api/v1/price.py
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ from io import StringIO
 from app.database import get_db
 from app.core.security import get_current_active_user
 from app.crud.price import create_price, get_prices
-from app.crud.discount import get_active_discounts_for_store  # ← NEW
+from app.crud.discount import get_active_discounts_for_store
 from app.schemas.price import (
     PriceCreate, PriceResponse,
     PriceComparisonResponse, PriceComparisonItem,
@@ -98,7 +99,7 @@ async def batch_upload_prices(
     return PriceBatchResponse(success_count=success, failed_count=len(errors), errors=errors)
 
 
-# ────── COMPARE PRICES WITH DISCOUNTS ──────
+# ────── COMPARE PRICES WITH DISCOUNTS + LABELING ──────
 @router.get("/compare", response_model=PriceComparisonResponse)
 def compare_prices(
     product_name: str = Query(..., description="Exact product name (case-insensitive)"),
@@ -132,8 +133,10 @@ def compare_prices(
         raise HTTPException(404, detail=f"No prices found for '{product_name}' nearby")
 
     items = []
+    final_prices = []  # Collect final prices for labeling
+
+    # First pass: calculate final prices and collect them
     for price, store, distance in results:
-        # Check for active discount
         discount = get_active_discounts_for_store(
             db, store_id=store.id, gtin=price.gtin, product_name=price.product_name
         )
@@ -150,18 +153,50 @@ def compare_prices(
                 final_price = round(original_price + discount.discount_fixed, 2)
                 discount_info = f"€{abs(discount.discount_fixed):.2f} off (app only!)"
 
-        items.append(PriceComparisonItem(
-            store_id=store.id,
-            store_name=store.name,
-            price=original_price,
-            final_price=final_price,           
-            discount_info=discount_info,       
-            distance_km=round(distance, 2),
-            address=store.address,
-            lat=store.lat,
-            lon=store.lon,
-            barcode_type=price.barcode_type,
-            gtin=price.gtin,
+        final_prices.append(final_price)
+
+        items.append({
+            "price_obj": price,
+            "store": store,
+            "distance": distance,
+            "original_price": original_price,
+            "final_price": final_price,
+            "discount_info": discount_info
+        })
+
+    # Calculate average of final prices
+    avg_price = sum(final_prices) / len(final_prices) if final_prices else 0
+
+    # Second pass: assign labels and build response
+    response_items = []
+    for item in items:
+        final_price = item["final_price"]
+        ratio = final_price / avg_price if avg_price > 0 else 1.0
+
+        if ratio <= 0.75:
+            label = "very inexpensive"
+        elif ratio <= 0.9:
+            label = "inexpensive"
+        elif ratio <= 1.1:
+            label = "average"
+        elif ratio <= 1.3:
+            label = "expensive"
+        else:
+            label = "very expensive"
+
+        response_items.append(PriceComparisonItem(
+            store_id=item["store"].id,
+            store_name=item["store"].name,
+            price=item["original_price"],
+            final_price=final_price,
+            discount_info=item["discount_info"],
+            price_label=label,                   
+            distance_km=round(item["distance"], 2),
+            address=item["store"].address,
+            lat=item["store"].lat,
+            lon=item["store"].lon,
+            barcode_type=item["price_obj"].barcode_type,
+            gtin=item["price_obj"].gtin,
         ))
 
-    return PriceComparisonResponse(product_name=product_name, results=items)
+    return PriceComparisonResponse(product_name=product_name, results=response_items)
