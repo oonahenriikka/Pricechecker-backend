@@ -10,6 +10,8 @@ class PriceComparisonItem(BaseModel):
     store_id: int
     store_name: str
     price: float
+    final_price: float
+    discount_info: Optional[str] = None
     distance_km: float
     address: str | None = None
     lat: float
