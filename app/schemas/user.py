@@ -1,6 +1,24 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
+class UserAdminResponse(BaseModel):
+    id: int
+    email: str
+    store_id: int | None
+    is_admin: bool
+    is_approved: bool
+    is_active: bool   
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserToggleActive(BaseModel):
+    is_active: bool
+
+class UserMakeAdmin(BaseModel):
+    make_admin: bool
 
 class UserBase(BaseModel):
     email: EmailStr
