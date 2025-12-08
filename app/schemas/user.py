@@ -1,8 +1,10 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 from datetime import datetime
 
 class UserAdminResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     email: str
     store_id: int | None
@@ -10,9 +12,6 @@ class UserAdminResponse(BaseModel):
     is_approved: bool
     is_active: bool   
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class UserToggleActive(BaseModel):
     is_active: bool
@@ -39,10 +38,9 @@ class Token(BaseModel):
 
 
 class UserResponse(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     is_admin: bool
     is_approved: bool
     store_id: Optional[int] = None  
-
-    class Config:
-        from_attributes = True  
