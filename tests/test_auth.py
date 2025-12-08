@@ -5,8 +5,8 @@ from app.main import app
 client = TestClient(app)
 
 def test_signup_login():
-    # Clean signup
-    response = client.post("/api/v1/signup", json={
+    # Clean signup (using Form data, not JSON)
+    response = client.post("/api/v1/signup", data={
         "email": "user@example.com",
         "password": "test123",
         "store_name": "Lidl Test"
