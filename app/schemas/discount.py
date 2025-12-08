@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -10,6 +10,8 @@ class DiscountCreate(BaseModel):
     valid_until: Optional[datetime] = None
 
 class DiscountResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     store_id: int
     gtin: Optional[str]
@@ -17,6 +19,3 @@ class DiscountResponse(BaseModel):
     discount_percent: float
     discount_fixed: Optional[float]
     valid_until: Optional[datetime]
-
-    class Config:
-        from_attributes = True

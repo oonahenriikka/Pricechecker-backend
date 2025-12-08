@@ -13,3 +13,8 @@ def create_new_store(store: StoreCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(400, detail="Store already exists")
     return create_store(db=db, store=store)
+
+
+@router.get("/stores", response_model=list[StoreResponse])
+def list_stores(db: Session = Depends(get_db)):
+    return db.query(Store).all()
