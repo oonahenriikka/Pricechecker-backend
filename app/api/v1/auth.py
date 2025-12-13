@@ -1,31 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.core.security import create_access_token, get_password_hash, verify_password, get_current_admin_user
+from app.core.security import create_access_token, get_current_admin_user
 from app.crud.user import create_user, get_user_by_email, approve_user
 from app.database import get_db
-from app.schemas.user import UserCreate, UserResponse, Token, EmailStr
-from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse, Token
 from app.models.store import Store
 from sqlalchemy import func
 
 router = APIRouter()
 
 @router.post("/signup", response_model=UserResponse)
-def signup(
-    email: EmailStr = Form(...),
-    password: str = Form(...),
-    store_name: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    store = db.query(Store).filter(func.lower(Store.name) == func.lower(store_name.strip())).first()
+def signup(user_in: UserCreate, db: Session = Depends(get_db)):
+    store_name = user_in.store_name.strip()
+    store = db.query(Store).filter(func.lower(Store.name) == func.lower(store_name)).first()
     if not store:
         raise HTTPException(status_code=400, detail="Store not found")
-    if get_user_by_email(db, email):
+    if get_user_by_email(db, user_in.email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    hashed = get_password_hash(password)
-    user = create_user(db=db, email=email, password=hashed, store_id=store.id, is_admin=False)
+    user = create_user(
+        db=db,
+        email=user_in.email,
+        password=user_in.password,  # pass plain password; create_user handles hashing
+        store_id=store.id,
+        is_admin=False,
+    )
     return user
 
 @router.post("/login", response_model=Token)
