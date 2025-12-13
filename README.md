@@ -9,7 +9,9 @@ How to run the project:
    venv\Scripts\activate          # Windows
 
 3. Install dependencies
-   pip install fastapi uvicorn sqlalchemy pydantic pytest httpx "passlib[argon2]" "python-jose[cryptography]" python-multipart argon2-cffi
+   pip install -r requirements.txt
+   # Or manually:
+   # pip install fastapi uvicorn sqlalchemy pydantic pydantic-settings pytest httpx "passlib[argon2]" "python-jose[cryptography]" python-multipart argon2-cffi email-validator
 
 4. Run the server
    uvicorn app.main:app --reload

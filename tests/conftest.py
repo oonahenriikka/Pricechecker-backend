@@ -15,9 +15,14 @@ def setup_database():
 @pytest.fixture
 def admin_token():
     db = SessionLocal()
-    admin = db.query(__import__("app.models.user").user.User).filter_by(email="admin@test.fi").first()
+    from app.models.user import User
+    admin = db.query(User).filter(User.email == "admin@test.fi").first()
     if not admin:
-        create_user(db=db, email="admin@test.fi", password="admin123", is_admin=True, is_approved=True)
+        create_user(db=db, email="admin@test.fi", password="admin123", is_admin=True)
+    # Ensure there is a normal user with id=2 for admin actions tests
+    user2 = db.query(User).filter(User.email == "normal@test.fi").first()
+    if not user2:
+        create_user(db=db, email="normal@test.fi", password="user123", is_admin=False)
     db.close()
 
     login = client.post("/api/v1/login", data={"username": "admin@test.fi", "password": "admin123"})
@@ -33,8 +38,8 @@ def approved_store_token():
         "address": "Testikatu 1"
     })
 
-    # Signup
-    client.post("/api/v1/signup", json={
+    # Signup (using Form data, not JSON)
+    client.post("/api/v1/signup", data={
         "email": "store@test.fi",
         "password": "store123",
         "store_name": "Testikauppa Oy"
@@ -50,4 +55,5 @@ def approved_store_token():
     db.close()
 
     login = client.post("/api/v1/login", data={"username": "store@test.fi", "password": "store123"})
+    assert login.status_code == 200, login.json()
     return login.json()["access_token"]

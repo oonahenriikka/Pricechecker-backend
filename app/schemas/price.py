@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -32,6 +32,8 @@ class PriceCreate(BaseModel):
     barcode: BarcodeInfo | None = None
 
 class PriceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     product_name: str
     price: float
@@ -40,9 +42,6 @@ class PriceResponse(BaseModel):
     store_id: int
     user_id: int
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class PriceBatchItem(BaseModel):
     product_name: str

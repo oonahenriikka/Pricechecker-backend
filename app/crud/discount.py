@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.models.discount import Discount
 from app.schemas.discount import DiscountCreate
 
-def create_discount(db: Session, discount_in: DiscountCreate, user_id: int):
-    db_discount = Discount(**discount_in.model_dump(), created_by=user_id)
+def create_discount(db: Session, discount_in: DiscountCreate, user_id: int, store_id: int):
+    db_discount = Discount(**discount_in.model_dump(), created_by=user_id, store_id=store_id)
     db.add(db_discount)
     db.commit()
     db.refresh(db_discount)
