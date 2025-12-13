@@ -24,9 +24,13 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Pass plain password; create_user will hash internally
-    user = create_user(db=db, email=email, password=password, store_id=store.id, is_admin=False)
-    db.commit()
-    db.refresh(user)
+    user = create_user(
+        db=db,
+        email=user_in.email,
+        password=user_in.password,
+        store_id=store.id,
+        is_admin=False,
+    )
     return user
 
 @router.post("/login", response_model=Token)
