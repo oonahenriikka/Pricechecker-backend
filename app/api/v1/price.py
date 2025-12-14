@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 import csv
 from io import StringIO
+import math
 
 from app.database import get_db
 from app.core.security import get_current_active_user
@@ -102,13 +103,12 @@ async def batch_upload_prices(
 # ────── COMPARE PRICES WITH DISCOUNTS + LABELING ──────
 @router.get("/compare", response_model=PriceComparisonResponse)
 def compare_prices(
-    product_name: str = Query(..., description="Exact product name (case-insensitive)"),
-    lat: float = Query(..., description="Your latitude"),
-    lon: float = Query(..., description="Your longitude"),
-    radius_km: float = Query(10.0, ge=0.1, le=100),
+    product_name: str = Query(..., description="Exact product name (case-insensitive)", min_length=1),
+    lat: float = Query(..., description="Your latitude", ge=-90, le=90),
+    lon: float = Query(..., description="Your longitude", ge=-180, le=180),
+    radius_km: float = Query(10.0, ge=0.1, le=1000),
     db: Session = Depends(get_db)
 ):
-    # SQLite lacks trig functions by default; for tests we skip distance filtering
     results = (
         db.query(Price, Store)
         .join(Store, Price.store_id == Store.id)
@@ -116,14 +116,27 @@ def compare_prices(
         .all()
     )
 
-    if not results:
+    def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        r = 6371.0
+        d_lat = math.radians(lat2 - lat1)
+        d_lon = math.radians(lon2 - lon1)
+        a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return r * c
+
+    filtered = []
+    for price, store in results:
+        distance = haversine_km(lat, lon, store.lat, store.lon)
+        if distance <= radius_km:
+            filtered.append((price, store, distance))
+
+    if not filtered:
         raise HTTPException(404, detail=f"No prices found for '{product_name}' nearby")
 
-    items = []
-    final_prices = []  # Collect final prices for labeling
+    final_prices: list[float] = []
+    response_items: list[PriceComparisonItem] = []
 
-    # First pass: calculate final prices and collect them
-    for price, store in results:
+    for price, store, distance in filtered:
         discount = get_active_discounts_for_store(
             db, store_id=store.id, gtin=price.gtin, product_name=price.product_name
         )
@@ -136,30 +149,26 @@ def compare_prices(
             if discount.discount_percent:
                 final_price = round(original_price * (1 - discount.discount_percent / 100), 2)
                 discount_info = f"{discount.discount_percent}% off (app only!)"
-            elif discount.discount_fixed:
-                final_price = round(original_price + discount.discount_fixed, 2)
+            elif discount.discount_fixed is not None:
+                final_price = round(max(original_price - discount.discount_fixed, 0), 2)
                 discount_info = f"€{abs(discount.discount_fixed):.2f} off (app only!)"
 
         final_prices.append(final_price)
 
-        items.append({
-            "price_obj": price,
+        response_items.append({
             "store": store,
-            "distance": 0.0,
             "original_price": original_price,
             "final_price": final_price,
-            "discount_info": discount_info
+            "discount_info": discount_info,
+            "distance": distance,
+            "price_obj": price,
         })
 
-    # Calculate average of final prices
     avg_price = sum(final_prices) / len(final_prices) if final_prices else 0
 
-    # Second pass: assign labels and build response
-    response_items = []
-    for item in items:
-        final_price = item["final_price"]
-        ratio = final_price / avg_price if avg_price > 0 else 1.0
-
+    labeled_items: list[PriceComparisonItem] = []
+    for item in response_items:
+        ratio = item["final_price"] / avg_price if avg_price > 0 else 1.0
         if ratio <= 0.75:
             label = "very inexpensive"
         elif ratio <= 0.9:
@@ -171,13 +180,13 @@ def compare_prices(
         else:
             label = "very expensive"
 
-        response_items.append(PriceComparisonItem(
+        labeled_items.append(PriceComparisonItem(
             store_id=item["store"].id,
             store_name=item["store"].name,
             price=item["original_price"],
-            final_price=final_price,
+            final_price=item["final_price"],
             discount_info=item["discount_info"],
-            price_label=label,                   
+            price_label=label,
             distance_km=round(item["distance"], 2),
             address=item["store"].address,
             lat=item["store"].lat,
@@ -186,4 +195,4 @@ def compare_prices(
             gtin=item["price_obj"].gtin,
         ))
 
-    return PriceComparisonResponse(product_name=product_name, results=response_items)
+    return PriceComparisonResponse(product_name=product_name, results=labeled_items)
