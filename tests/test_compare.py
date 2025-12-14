@@ -1,11 +1,17 @@
 from tests.conftest import client
+from app.database import SessionLocal
+from app.models.user import User
 
 def test_compare_with_labeling(approved_store_token):
     headers = {"Authorization": f"Bearer {approved_store_token}"}
 
+    db = SessionLocal()
+    store_id = db.query(User).filter(User.email == "store@test.fi").first().store_id
+    db.close()
+
     # Add prices to multiple stores
     client.post("/api/v1/prices/", json={
-        "product_name": "Coca Cola 1.5L", "price": 2.50, "store_id": 1
+        "product_name": "Coca Cola 1.5L", "price": 2.50, "store_id": store_id
     }, headers=headers)
 
     resp = client.get("/api/v1/compare", params={
