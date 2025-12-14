@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Form, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.security import create_access_token, get_current_admin_user
@@ -14,20 +14,35 @@ from sqlalchemy import func
 router = APIRouter()
 
 @router.post("/signup", response_model=UserResponse)
-def signup(user_in: UserCreate, db: Session = Depends(get_db)):
-    store_name = user_in.store_name.strip()
-    store = db.query(Store).filter(func.lower(Store.name) == func.lower(store_name)).first()
+def signup(
+    user_in: UserCreate | None = Body(None),  # JSON body path
+    email: EmailStr | None = Form(None),
+    password: str | None = Form(None),
+    store_name: str | None = Form(None),
+    db: Session = Depends(get_db)
+):
+    # Accept both JSON (UserCreate) and form data (used by tests/clients)
+    if user_in:
+        email = user_in.email
+        password = user_in.password
+        store_name = user_in.store_name
+    else:
+        if not all([email, password, store_name]):
+            raise HTTPException(status_code=400, detail="email, password, store_name required")
+
+    store_name_clean = store_name.strip()
+    store = db.query(Store).filter(func.lower(Store.name) == func.lower(store_name_clean)).first()
     if not store:
         # Auto-create store placeholder if missing (tests assume signup works without pre-creating store)
-        store = create_store(db, StoreCreate(name=store_name.strip(), lat=0.0, lon=0.0, address=None))
-    if get_user_by_email(db, user_in.email):
+        store = create_store(db, StoreCreate(name=store_name_clean, lat=0.0, lon=0.0, address=None))
+    if get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Pass plain password; create_user will hash internally
     user = create_user(
         db=db,
-        email=user_in.email,
-        password=user_in.password,
+        email=email,
+        password=password,
         store_id=store.id,
         is_admin=False,
     )
