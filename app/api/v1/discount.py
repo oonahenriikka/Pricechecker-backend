@@ -20,6 +20,8 @@ def create_store_discount(
 ):
     if not current_user.is_approved:
         raise HTTPException(403, "Not approved")
+    if not current_user.store_id:
+        raise HTTPException(400, "User has no store assigned")
     # Optional: check that user belongs to the store
     created = create_discount(
         db=db,
