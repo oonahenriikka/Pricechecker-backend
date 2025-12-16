@@ -18,3 +18,11 @@ def create_new_store(store: StoreCreate, db: Session = Depends(get_db)):
 @router.get("/stores", response_model=list[StoreResponse])
 def list_stores(db: Session = Depends(get_db)):
     return db.query(Store).all()
+
+#get 1 store by id
+@router.get("/stores/{store_id}", response_model=StoreResponse)
+def get_store(store_id: int, db: Session = Depends(get_db)):
+    store = db.query(Store).filter(Store.id == store_id).first()
+    if not store:
+        raise HTTPException(404, detail="Store not found")
+    return store  

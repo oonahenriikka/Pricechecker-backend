@@ -18,6 +18,7 @@ def test_create_and_list_stores(admin_token):
     assert all_stores.status_code == 200
     assert len(all_stores.json()) > 0
 
+# Get store by ID
 def test_get_store_by_id(admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
@@ -33,3 +34,4 @@ def test_get_store_by_id(admin_token):
     resp = client.get(f"/api/v1/stores/{store_id}")
     assert resp.status_code == 200
     assert resp.json()["id"] == store_id
+    assert resp.json()["name"] == "S-market Majakkaranta"
