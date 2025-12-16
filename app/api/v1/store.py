@@ -38,3 +38,16 @@ def delete_store(store_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": f"Store {store_id} deleted successfully"}
+
+#search stores within 2km radius
+@router.get("/stores/nearby", response_model=list[StoreResponse])
+def nearby_stores(
+    lat: float,
+    lon: float,
+    radius: float = 0.01,  # ~2km
+    db: Session = Depends(get_db)
+):
+    return db.query(Store).filter(
+        Store.lat.between(lat - radius, lat + radius),
+        Store.lon.between(lon - radius, lon + radius),
+    ).all()

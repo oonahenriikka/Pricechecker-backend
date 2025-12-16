@@ -48,3 +48,16 @@ def test_delete_store_by_id(admin_token):
 
     resp = client.delete(f"/api/v1/stores/{store['id']}", headers=headers)
     assert resp.status_code == 204
+
+
+# Search nearby stores
+def test_nearby_stores(admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    resp = client.get("/api/v1/stores/nearby", params={
+        "lat": 60.4503,
+        "lon": 22.2957, #TUAS address
+        "radius": 0.02 # 2.22km
+    }, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()  
+    assert isinstance(data, list)
