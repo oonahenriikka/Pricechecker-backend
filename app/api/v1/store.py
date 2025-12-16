@@ -26,3 +26,8 @@ def get_store(store_id: int, db: Session = Depends(get_db)):
     if not store:
         raise HTTPException(404, detail="Store not found")
     return store  
+
+#delete store by id
+@router.delete("/{store_id}", summary="Delete store")
+def delete_store(store_id: int):
+    return {"message": f"Store {store_id} deleted"}

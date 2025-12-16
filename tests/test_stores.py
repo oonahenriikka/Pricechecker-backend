@@ -35,3 +35,16 @@ def test_get_store_by_id(admin_token):
     assert resp.status_code == 200
     assert resp.json()["id"] == store_id
     assert resp.json()["name"] == "S-market Majakkaranta"
+
+# Delete store by ID
+def test_delete_store_by_id(admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}    
+    store = client.post("/api/v1/stores/", json={
+        "name": "S-market Majakkaranta",
+        "lat": 60.4296,
+        "lon": 22.2394,
+        "address": "Kölikatu 2"
+    }, headers=headers).json()
+
+    resp = client.delete(f"/api/v1/stores/{store['id']}", headers=headers)
+    assert resp.status_code == 204
