@@ -44,7 +44,7 @@ def delete_store(store_id: int, db: Session = Depends(get_db)):
 def nearby_stores(
     lat: float,
     lon: float,
-    radius: float = 0.01,  # ~2km
+    radius: float = 0.01,  # 1.11km
     db: Session = Depends(get_db)
 ):
     return db.query(Store).filter(
